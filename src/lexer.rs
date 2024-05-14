@@ -12,6 +12,14 @@ pub enum LexToken {
     Return, // return
 
     Plus, // +
+    PlusAssign, // +=
+    Minus, // -
+    MinusAssign, // -=
+    Multiply, // *
+    MultiplyAssign, // *=
+    Power, // **
+    Divide, // /
+    DivideAssign, // /=
     Assignment, // =
     Equals, // ==
     Lambda, // =>
@@ -150,7 +158,42 @@ impl<'a> Iterator for Lexer<'a> {
             // Lex unary and binary operators
             Some(&'+') => {
                 self.input.next();
-                Some(LexToken::Plus)
+                if self.input.peek() == Some(&'=') {
+                    self.input.next();
+                    Some(LexToken::PlusAssign)
+                } else {
+                    Some(LexToken::Plus)
+                }
+            }
+            Some(&'-') => {
+                self.input.next();
+                if self.input.peek() == Some(&'=') {
+                    self.input.next();
+                    Some(LexToken::MinusAssign)
+                } else {
+                    Some(LexToken::Minus)
+                }
+            }
+            Some(&'*') => {
+                self.input.next();
+                if self.input.peek() == Some(&'=') {
+                    self.input.next();
+                    Some(LexToken::MultiplyAssign)
+                } else if self.input.peek() == Some(&'*') {
+                    self.input.next();
+                    Some(LexToken::Power)
+                } else {
+                    Some(LexToken::Multiply)
+                }
+            }
+            Some(&'/') => {
+                self.input.next();
+                if self.input.peek() == Some(&'=') {
+                    self.input.next();
+                    Some(LexToken::DivideAssign)
+                } else {
+                    Some(LexToken::Divide)
+                }
             }
             Some(&'=') => {
                 self.input.next();
@@ -171,6 +214,7 @@ impl<'a> Iterator for Lexer<'a> {
 }
 
 
+// TODO: Errors
 #[cfg(test)]
 mod test {
     use super::*;
@@ -337,6 +381,63 @@ mod test {
             actual.next()
         );
         
+        assert_eq!(
+            None,
+            actual.next()
+        );
+    }
+
+    #[test]
+    fn it_lexes_operations() {
+        const INPUT: &'static str = "+ += - -= * *= ** / /=";
+
+        let mut actual = Lexer::new(INPUT);
+
+        assert_eq!(
+            Some(LexToken::Plus),
+            actual.next()
+        );
+
+        assert_eq!(
+            Some(LexToken::PlusAssign),
+            actual.next()
+        );
+
+        assert_eq!(
+            Some(LexToken::Minus),
+            actual.next()
+        );
+
+        assert_eq!(
+            Some(LexToken::MinusAssign),
+            actual.next()
+        );
+
+        assert_eq!(
+            Some(LexToken::Multiply),
+            actual.next()
+        );
+
+        assert_eq!(
+            Some(LexToken::MultiplyAssign),
+            actual.next()
+        );
+
+        assert_eq!(
+            Some(LexToken::Power),
+            actual.next()
+        );
+
+        assert_eq!(
+            Some(LexToken::Divide),
+            actual.next()
+        );
+
+        assert_eq!(
+            Some(LexToken::DivideAssign),
+            actual.next()
+        );
+
         assert_eq!(
             None,
             actual.next()
