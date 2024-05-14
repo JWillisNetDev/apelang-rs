@@ -7,16 +7,24 @@ use phf::phf_map;
 #[derive(Debug, Clone, PartialEq)]
 pub enum LexToken {
     Let, // let
+    If, // if
+    Return, // return
     Assignment, // =
     Equals, // ==
     Integer(i32), // [0-9]+
     Semicolon, // ;
+    LParen, // (
+    RParen, // )
+    LBrace, // {
+    RBrace, // }
     Identifier(String), // [A-Za-z]+ (not another token)
     Error(String),
 }
 
 static KEYWORDS: phf::Map<&'static str, LexToken> = phf_map! {
     "let" => LexToken::Let,
+    "if" => LexToken::If,
+    "return" => LexToken::Return,
 };
 
 fn try_get_keyword(keyword: &str) -> Option<LexToken> {
@@ -28,7 +36,10 @@ pub struct Lexer<'a> {
 }
 
 fn is_delimiter(c: char) -> bool {
-    c == ' ' || c == ';'
+    c == ' '
+        || c == ';'
+        || c == '(' || c == ')'
+        || c == '{' || c == '}'
 }
 
 impl<'a> Lexer<'a> {
@@ -50,7 +61,7 @@ impl<'a> Lexer<'a> {
     fn try_read_identifier_or_keyword(&mut self) -> Result<LexToken, String> {
         let ident = self.read_to_delimiter();
         if ident.is_empty() {
-            return Err(format!("Attempted to read, but found nothing."));
+            return Err("Attempted to read, but found nothing.".into());
         }
         match try_get_keyword(ident.as_str()) {
             Some(token) => Ok(token),
@@ -99,10 +110,26 @@ impl<'a> Iterator for Lexer<'a> {
                 }
             }
 
-            // Lex semicolons delimiters
+            // Lex delimiters
             Some(&';') => {
                 self.input.next();
                 Some(LexToken::Semicolon)
+            }
+            Some(&'(') => {
+                self.input.next();
+                Some(LexToken::LParen)
+            }
+            Some(&')') => {
+                self.input.next();
+                Some(LexToken::RParen)
+            }
+            Some(&'{') => {
+                self.input.next();
+                Some(LexToken::LBrace)
+            }
+            Some(&'}') => {
+                self.input.next();
+                Some(LexToken::RBrace)
             }
 
             // Lex unary and binary operators
@@ -135,38 +162,45 @@ mod test {
         lexer.eat_whitespace();
         assert_eq!(
             "this".to_string(),
-            lexer.read_to_delimiter());
+            lexer.read_to_delimiter()
+        );
 
         lexer.eat_whitespace();
         assert_eq!(
             "is".to_string(),
-            lexer.read_to_delimiter());
+            lexer.read_to_delimiter()
+        );
+
         lexer.eat_whitespace();
         assert_eq!(
             "surrounded".to_string(),
-            lexer.read_to_delimiter());
+            lexer.read_to_delimiter()
+        );
 
         lexer.eat_whitespace();
         assert_eq!(
             "by".to_string(),
-            lexer.read_to_delimiter());
+            lexer.read_to_delimiter()
+        );
 
         lexer.eat_whitespace();
         assert_eq!(
             "spaces".to_string(),
-            lexer.read_to_delimiter());
+            lexer.read_to_delimiter()
+        );
         
         
         lexer.eat_whitespace();
         assert_eq!(
             "a".to_string(),
-            lexer.read_to_delimiter());
+            lexer.read_to_delimiter()
+        );
 
         lexer.eat_whitespace();
         assert_eq!(
             "",
-            lexer.read_to_delimiter())
-
+            lexer.read_to_delimiter()
+        );
     }
 
     #[test]
@@ -177,15 +211,18 @@ mod test {
 
         assert_eq!(
             Some(LexToken::Let),
-            actual.next());
+            actual.next()
+        );
 
         assert_eq!(
             Some(LexToken::Identifier("var".to_string())),
-            actual.next());
+            actual.next()
+        );
 
         assert_eq!(
             Some(LexToken::Assignment),
-            actual.next());
+            actual.next()
+        );
 
         assert_eq!(
             Some(LexToken::Integer(100)),
@@ -193,10 +230,79 @@ mod test {
 
         assert_eq!(
             Some(LexToken::Semicolon),
-            actual.next());
+            actual.next()
+        );
 
         assert_eq!(
             None,
-            actual.next());
+            actual.next()
+        );
+    }
+
+    #[test]
+    fn it_lexes_ifs() {
+        const INPUT: &'static str = "if (x1 == x2) { return 100; }";
+
+        let mut actual = Lexer::new(INPUT);
+
+        assert_eq!(
+            Some(LexToken::If),
+            actual.next()
+        );
+
+        assert_eq!(
+            Some(LexToken::LParen),
+            actual.next()
+        );
+
+        assert_eq!(
+            Some(LexToken::Identifier("x1".into())),
+            actual.next()
+        );
+        
+        assert_eq!(
+            Some(LexToken::Equals),
+            actual.next()
+        );
+
+        assert_eq!(
+            Some(LexToken::Identifier("x2".into())),
+            actual.next()
+        );
+
+        assert_eq!(
+            Some(LexToken::RParen),
+            actual.next()
+        );
+
+        assert_eq!(
+            Some(LexToken::LBrace),
+            actual.next()
+        );
+
+        assert_eq!(
+            Some(LexToken::Return),
+            actual.next()
+        );
+
+        assert_eq!(
+            Some(LexToken::Integer(100)),
+            actual.next()
+        );
+
+        assert_eq!(
+            Some(LexToken::Semicolon),
+            actual.next()
+        );
+
+        assert_eq!(
+            Some(LexToken::RBrace),
+            actual.next()
+        );
+
+        assert_eq!(
+            None,
+            actual.next()
+        );
     }
 }
