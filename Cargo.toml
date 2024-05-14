@@ -1,0 +1,17 @@
+[package]
+name = "apelang"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "apelang"
+path = "src/lib.rs"
+
+[[bin]]
+name = "apelang_cli"
+path = "src/bin.rs"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+phf = { version = "0.11.2", features = ["macros"] }
