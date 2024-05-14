@@ -265,7 +265,7 @@ mod test {
 
     #[test]
     fn it_lexes_function_calls() {
-        const INPUT: &'static str = "let closure = fn(x, y) => x + y;";
+        const INPUT: &'static str = "let closure = fn(x, y) => x + y; closure(10, 20);";
 
         let mut actual = Lexer::new(INPUT);
 
@@ -294,6 +294,20 @@ mod test {
         assert_eq!(Some(LexToken::Plus), actual.next());
 
         assert_eq!(Some(LexToken::Identifier("y".into())), actual.next());
+
+        assert_eq!(Some(LexToken::Semicolon), actual.next());
+
+        assert_eq!(Some(LexToken::Identifier("closure".into())), actual.next());
+
+        assert_eq!(Some(LexToken::LParen), actual.next());
+
+        assert_eq!(Some(LexToken::Integer(10)), actual.next());
+
+        assert_eq!(Some(LexToken::Comma), actual.next());
+
+        assert_eq!(Some(LexToken::Integer(20)), actual.next());
+
+        assert_eq!(Some(LexToken::RParen), actual.next());
 
         assert_eq!(Some(LexToken::Semicolon), actual.next());
 
