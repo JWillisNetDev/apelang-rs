@@ -8,22 +8,32 @@ use phf::phf_map;
 pub enum LexToken {
     Let, // let
     If, // if
+    Fn, // fn
     Return, // return
+
+    Plus, // +
     Assignment, // =
     Equals, // ==
-    Integer(i32), // [0-9]+
+    Lambda, // =>
+
     Semicolon, // ;
+    Comma, // ,
     LParen, // (
     RParen, // )
     LBrace, // {
     RBrace, // }
+
+    Integer(i32), // [0-9]+
+
     Identifier(String), // [A-Za-z]+ (not another token)
+    
     Error(String),
 }
 
 static KEYWORDS: phf::Map<&'static str, LexToken> = phf_map! {
     "let" => LexToken::Let,
     "if" => LexToken::If,
+    "fn" => LexToken::Fn,
     "return" => LexToken::Return,
 };
 
@@ -38,6 +48,7 @@ pub struct Lexer<'a> {
 fn is_delimiter(c: char) -> bool {
     c == ' '
         || c == ';'
+        || c == ','
         || c == '(' || c == ')'
         || c == '{' || c == '}'
 }
@@ -115,6 +126,10 @@ impl<'a> Iterator for Lexer<'a> {
                 self.input.next();
                 Some(LexToken::Semicolon)
             }
+            Some(&',') => {
+                self.input.next();
+                Some(LexToken::Comma)
+            }
             Some(&'(') => {
                 self.input.next();
                 Some(LexToken::LParen)
@@ -133,11 +148,18 @@ impl<'a> Iterator for Lexer<'a> {
             }
 
             // Lex unary and binary operators
+            Some(&'+') => {
+                self.input.next();
+                Some(LexToken::Plus)
+            }
             Some(&'=') => {
                 self.input.next();
                 if self.input.peek() == Some(&'=') {
                     self.input.next();
                     Some(LexToken::Equals)
+                } else if self.input.peek() == Some(&'>') {
+                    self.input.next();
+                    Some(LexToken::Lambda)
                 } else {
                     Some(LexToken::Assignment)
                 }
@@ -215,7 +237,7 @@ mod test {
         );
 
         assert_eq!(
-            Some(LexToken::Identifier("var".to_string())),
+            Some(LexToken::Identifier("var".into())),
             actual.next()
         );
 
@@ -233,6 +255,88 @@ mod test {
             actual.next()
         );
 
+        assert_eq!(
+            None,
+            actual.next()
+        );
+    }
+
+    #[test]
+    fn it_lexes_function_calls() {
+        const INPUT: &'static str = "let closure = fn(x, y) => x + y;";
+
+        let mut actual = Lexer::new(INPUT);
+
+        assert_eq!(
+            Some(LexToken::Let),
+            actual.next()
+        );
+        
+        assert_eq!(
+            Some(LexToken::Identifier("closure".into())),
+            actual.next()
+        );
+        
+        assert_eq!(
+            Some(LexToken::Assignment),
+            actual.next()
+        );
+        
+        assert_eq!(
+            Some(LexToken::Fn),
+            actual.next()
+        );
+        
+        assert_eq!(
+            Some(LexToken::LParen),
+            actual.next()
+        );
+        
+        assert_eq!(
+            Some(LexToken::Identifier("x".into())),
+            actual.next()
+        );
+        
+        assert_eq!(
+            Some(LexToken::Comma),
+            actual.next()
+        );
+        
+        assert_eq!(
+            Some(LexToken::Identifier("y".into())),
+            actual.next()
+        );
+        
+        assert_eq!(
+            Some(LexToken::RParen),
+            actual.next()
+        );
+        
+        assert_eq!(
+            Some(LexToken::Lambda),
+            actual.next()
+        );
+        
+        assert_eq!(
+            Some(LexToken::Identifier("x".into())),
+            actual.next()
+        );
+        
+        assert_eq!(
+            Some(LexToken::Plus),
+            actual.next()
+        );
+        
+        assert_eq!(
+            Some(LexToken::Identifier("y".into())),
+            actual.next()
+        );
+        
+        assert_eq!(
+            Some(LexToken::Semicolon),
+            actual.next()
+        );
+        
         assert_eq!(
             None,
             actual.next()
