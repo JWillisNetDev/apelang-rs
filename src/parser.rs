@@ -1,12 +1,8 @@
 //! This module parses lex tokens into an AST
-//! 
+//!
 
-use std::iter::{Peekable, Iterator};
-use crate::{
-    Identifier,
-    ApeInteger,
-    lexer::LexToken,
-};
+use crate::{lexer::LexToken, ApeInteger, Identifier};
+use std::iter::{Iterator, Peekable};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expression<'a> {
@@ -17,7 +13,10 @@ pub enum Expression<'a> {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Statement<'a> {
-    Let { identifier: Identifier, value: &'a Expression<'a> },
+    Let {
+        identifier: Identifier,
+        value: &'a Expression<'a>,
+    },
 }
 
 pub struct Parser<'a, T: Iterator<Item = &'a LexToken>> {
@@ -32,15 +31,20 @@ impl<'a> Program<'a> {
     fn new(statements: Vec<&'a Statement>) -> Self {
         Program { statements }
     }
-    
+
     fn from_empty() -> Self {
         Program { statements: vec![] }
     }
 }
 
-impl<'a, T> Parser<'a, T> where T: Iterator<Item = &'a LexToken> {
+impl<'a, T> Parser<'a, T>
+where
+    T: Iterator<Item = &'a LexToken>,
+{
     pub fn new(tokens: T) -> Self {
-        Parser { tokens: tokens.peekable() }
+        Parser {
+            tokens: tokens.peekable(),
+        }
     }
 
     pub fn parse(&mut self) -> Result<Program<'a>, String> {
@@ -56,7 +60,7 @@ impl<'a, T> Parser<'a, T> where T: Iterator<Item = &'a LexToken> {
 
         Err("Some error".into())
     }
-    
+
     fn expect_token_variant(&mut self, expected: &LexToken) -> Result<&LexToken, String> {
         if let Some(peek) = self.tokens.peek() {
             if std::mem::discriminant(*peek) == std::mem::discriminant(expected) {
@@ -77,7 +81,7 @@ impl<'a, T> Parser<'a, T> where T: Iterator<Item = &'a LexToken> {
                     self.tokens.next();
                     Ok(ident)
                 }
-                _ => Err(format!("Expected identifier, found {:?}", peek))
+                _ => Err(format!("Expected identifier, found {:?}", peek)),
             }
         } else {
             Err("Expected identifier, found none".into())
@@ -91,28 +95,65 @@ mod test {
 
     #[test]
     fn it_expects_identifiers() {
-        const EXPECTED_IDENTIFIER: &'static str = "SomeIdentifier";
         let input = vec![
-            LexToken::Identifier(EXPECTED_IDENTIFIER.into())
+            LexToken::Identifier("SomeIdentifier".into()),
+            LexToken::Identifier("SomeOtherIdentifier".into()),
+            LexToken::Identifier("AnotherIdentifier".into()),
         ];
 
         let mut parser = Parser::new(input.iter().peekable());
-        let actual = parser.expect_identifier();
 
-        assert_eq!(
-            actual,
-            Ok(EXPECTED_IDENTIFIER)
-        );
+        assert_eq!(parser.expect_identifier(), Ok("SomeIdentifier".into()));
+
+        assert_eq!(parser.expect_identifier(), Ok("SomeOtherIdentifier".into()));
+
+        assert_eq!(parser.expect_identifier(), Ok("AnotherIdentifier".into()));
     }
 
     #[test]
     fn it_expects_identifiers_and_errors() {
-        let input = vec![
-            LexToken::Let,
-        ];
+        let input = vec![LexToken::Let];
 
         let mut parser = Parser::new(input.iter().peekable());
         let actual = parser.expect_identifier();
+
+        assert!(matches!(actual, Err(..)));
+    }
+
+    #[test]
+    fn it_expects_token_variants() {
+        let input = vec![LexToken::Let, LexToken::If, LexToken::Fn, LexToken::Return];
+
+        let mut parser = Parser::new(input.iter().peekable());
+
+        assert_eq!(
+            Ok(&LexToken::Let),
+            parser.expect_token_variant(&LexToken::Let)
+        );
+
+        assert_eq!(
+            Ok(&LexToken::If),
+            parser.expect_token_variant(&LexToken::If)
+        );
+
+        assert_eq!(
+            Ok(&LexToken::Fn),
+            parser.expect_token_variant(&LexToken::Fn)
+        );
+
+        assert_eq!(
+            Ok(&LexToken::Return),
+            parser.expect_token_variant(&LexToken::Return)
+        );
+    }
+
+    #[test]
+    fn it_expects_token_variants_and_errors() {
+        let input = vec![LexToken::Let];
+
+        let mut parser = Parser::new(input.iter().peekable());
+
+        let actual = parser.expect_token_variant(&LexToken::Return);
 
         assert!(matches!(actual, Err(..)));
     }
@@ -131,7 +172,7 @@ mod test {
 
         let mut parser = Parser::new(input.iter().peekable());
         let actual = parser.parse().unwrap();
-        
+
         assert_eq!(
             actual.statements[0],
             &Statement::Let {
