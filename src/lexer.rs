@@ -7,25 +7,31 @@ use std::{
     str::Chars,
 };
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LexToken {
     Let,    // let
     If,     // if
     Fn,     // fn
     Return, // return
 
-    Plus,           // +
-    PlusAssign,     // +=
-    Minus,          // -
-    MinusAssign,    // -=
-    Multiply,       // *
-    MultiplyAssign, // *=
-    Power,          // **
-    Divide,         // /
-    DivideAssign,   // /=
-    Assignment,     // =
-    Equals,         // ==
-    Lambda,         // =>
+    Plus,              // +
+    PlusAssign,        // +=
+    Minus,             // -
+    MinusAssign,       // -=
+    Multiply,          // *
+    MultiplyAssign,    // *=
+    Power,             // **
+    Divide,            // /
+    DivideAssign,      // /=
+    Assign,            // =
+    Equals,            // ==
+    Lambda,            // =>
+    Bang,              // !
+    NotEquals,         // !=
+    GreaterThan,       // >
+    GreaterThanEquals, // >=
+    LessThan,          // <
+    LessThanEquals,    // <=
 
     Semicolon, // ;
     Comma,     // ,
@@ -33,17 +39,13 @@ pub enum LexToken {
     RParen,    // )
     LBrace,    // {
     RBrace,    // }
+    LBracket,  // [
+    RBracket,  // ]
 
     Integer(i32),       // [0-9]+
     Identifier(String), // [A-Za-z]+ (not another token)
 
     Error(String),
-}
-
-impl std::fmt::Display for LexToken {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", dbg!(self))
-    }
 }
 
 static KEYWORDS: phf::Map<&'static str, LexToken> = phf_map! {
@@ -62,7 +64,15 @@ pub struct Lexer<'a> {
 }
 
 fn is_delimiter(c: char) -> bool {
-    c == ' ' || c == ';' || c == ',' || c == '(' || c == ')' || c == '{' || c == '}'
+    c == ' '
+        || c == ';'
+        || c == ','
+        || c == '('
+        || c == ')'
+        || c == '{'
+        || c == '}'
+        || c == '['
+        || c == ']'
 }
 
 impl<'a> Lexer<'a> {
@@ -158,6 +168,14 @@ impl<'a> Iterator for Lexer<'a> {
                 self.input.next();
                 Some(LexToken::RBrace)
             }
+            Some(&'[') => {
+                self.input.next();
+                Some(LexToken::LBracket)
+            }
+            Some(&']') => {
+                self.input.next();
+                Some(LexToken::RBracket)
+            }
 
             // Lex unary and binary operators
             Some(&'+') => {
@@ -208,7 +226,34 @@ impl<'a> Iterator for Lexer<'a> {
                     self.input.next();
                     Some(LexToken::Lambda)
                 } else {
-                    Some(LexToken::Assignment)
+                    Some(LexToken::Assign)
+                }
+            }
+            Some(&'>') => {
+                self.input.next();
+                if self.input.peek() == Some(&'=') {
+                    self.input.next();
+                    Some(LexToken::GreaterThanEquals)
+                } else {
+                    Some(LexToken::GreaterThan)
+                }
+            }
+            Some(&'<') => {
+                self.input.next();
+                if self.input.peek() == Some(&'=') {
+                    self.input.next();
+                    Some(LexToken::LessThanEquals)
+                } else {
+                    Some(LexToken::LessThan)
+                }
+            }
+            Some(&'!') => {
+                self.input.next();
+                if self.input.peek() == Some(&'=') {
+                    self.input.next();
+                    Some(LexToken::NotEquals)
+                } else {
+                    Some(LexToken::Bang)
                 }
             }
 
@@ -257,13 +302,9 @@ mod test {
         let mut actual = Lexer::new(INPUT);
 
         assert_eq!(Some(LexToken::Let), actual.next());
-
         assert_eq!(Some(LexToken::Identifier("var".into())), actual.next());
-
-        assert_eq!(Some(LexToken::Assignment), actual.next());
-
+        assert_eq!(Some(LexToken::Assign), actual.next());
         assert_eq!(Some(LexToken::Integer(100)), actual.next());
-
         assert_eq!(Some(LexToken::Semicolon), actual.next());
 
         assert_eq!(None, actual.next());
@@ -276,45 +317,25 @@ mod test {
         let mut actual = Lexer::new(INPUT);
 
         assert_eq!(Some(LexToken::Let), actual.next());
-
         assert_eq!(Some(LexToken::Identifier("closure".into())), actual.next());
-
-        assert_eq!(Some(LexToken::Assignment), actual.next());
-
+        assert_eq!(Some(LexToken::Assign), actual.next());
         assert_eq!(Some(LexToken::Fn), actual.next());
-
         assert_eq!(Some(LexToken::LParen), actual.next());
-
         assert_eq!(Some(LexToken::Identifier("x".into())), actual.next());
-
         assert_eq!(Some(LexToken::Comma), actual.next());
-
         assert_eq!(Some(LexToken::Identifier("y".into())), actual.next());
-
         assert_eq!(Some(LexToken::RParen), actual.next());
-
         assert_eq!(Some(LexToken::Lambda), actual.next());
-
         assert_eq!(Some(LexToken::Identifier("x".into())), actual.next());
-
         assert_eq!(Some(LexToken::Plus), actual.next());
-
         assert_eq!(Some(LexToken::Identifier("y".into())), actual.next());
-
         assert_eq!(Some(LexToken::Semicolon), actual.next());
-
         assert_eq!(Some(LexToken::Identifier("closure".into())), actual.next());
-
         assert_eq!(Some(LexToken::LParen), actual.next());
-
         assert_eq!(Some(LexToken::Integer(10)), actual.next());
-
         assert_eq!(Some(LexToken::Comma), actual.next());
-
         assert_eq!(Some(LexToken::Integer(20)), actual.next());
-
         assert_eq!(Some(LexToken::RParen), actual.next());
-
         assert_eq!(Some(LexToken::Semicolon), actual.next());
 
         assert_eq!(None, actual.next());
@@ -322,27 +343,45 @@ mod test {
 
     #[test]
     fn it_lexes_operations() {
-        const INPUT: &'static str = "+ += - -= * *= ** / /=";
+        const INPUT: &'static str = "+ += - -= * *= ** / /= = == ! != > >= < <=";
 
         let mut actual = Lexer::new(INPUT);
 
         assert_eq!(Some(LexToken::Plus), actual.next());
-
         assert_eq!(Some(LexToken::PlusAssign), actual.next());
-
         assert_eq!(Some(LexToken::Minus), actual.next());
-
         assert_eq!(Some(LexToken::MinusAssign), actual.next());
-
         assert_eq!(Some(LexToken::Multiply), actual.next());
-
         assert_eq!(Some(LexToken::MultiplyAssign), actual.next());
-
         assert_eq!(Some(LexToken::Power), actual.next());
-
         assert_eq!(Some(LexToken::Divide), actual.next());
-
         assert_eq!(Some(LexToken::DivideAssign), actual.next());
+        assert_eq!(Some(LexToken::Assign), actual.next());
+        assert_eq!(Some(LexToken::Equals), actual.next());
+        assert_eq!(Some(LexToken::Bang), actual.next());
+        assert_eq!(Some(LexToken::NotEquals), actual.next());
+        assert_eq!(Some(LexToken::GreaterThan), actual.next());
+        assert_eq!(Some(LexToken::GreaterThanEquals), actual.next());
+        assert_eq!(Some(LexToken::LessThan), actual.next());
+        assert_eq!(Some(LexToken::LessThanEquals), actual.next());
+
+        assert_eq!(None, actual.next());
+    }
+
+    #[test]
+    fn it_lexes_delimiters() {
+        const INPUT: &'static str = "() [] {} , ;";
+
+        let mut actual = Lexer::new(INPUT);
+
+        assert_eq!(Some(LexToken::LParen), actual.next());
+        assert_eq!(Some(LexToken::RParen), actual.next());
+        assert_eq!(Some(LexToken::LBracket), actual.next());
+        assert_eq!(Some(LexToken::RBracket), actual.next());
+        assert_eq!(Some(LexToken::LBrace), actual.next());
+        assert_eq!(Some(LexToken::RBrace), actual.next());
+        assert_eq!(Some(LexToken::Comma), actual.next());
+        assert_eq!(Some(LexToken::Semicolon), actual.next());
 
         assert_eq!(None, actual.next());
     }
@@ -354,25 +393,15 @@ mod test {
         let mut actual = Lexer::new(INPUT);
 
         assert_eq!(Some(LexToken::If), actual.next());
-
         assert_eq!(Some(LexToken::LParen), actual.next());
-
         assert_eq!(Some(LexToken::Identifier("x1".into())), actual.next());
-
         assert_eq!(Some(LexToken::Equals), actual.next());
-
         assert_eq!(Some(LexToken::Identifier("x2".into())), actual.next());
-
         assert_eq!(Some(LexToken::RParen), actual.next());
-
         assert_eq!(Some(LexToken::LBrace), actual.next());
-
         assert_eq!(Some(LexToken::Return), actual.next());
-
         assert_eq!(Some(LexToken::Integer(100)), actual.next());
-
         assert_eq!(Some(LexToken::Semicolon), actual.next());
-
         assert_eq!(Some(LexToken::RBrace), actual.next());
 
         assert_eq!(None, actual.next());

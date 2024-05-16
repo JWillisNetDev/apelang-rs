@@ -7,7 +7,7 @@ pub struct ApeInteger(i64);
 #[derive(Debug, PartialEq, PartialOrd, Copy, Clone)]
 pub struct ApeNumeric(f64);
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct ApeString(String);
 
 pub type Identifier = String;
