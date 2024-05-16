@@ -97,7 +97,7 @@ where
                     expect_token(&LexToken::Semicolon, self.tokens.next())?;
 
                     Statement::Let {
-                        ident: ident.into(),
+                        ident,
                         expr,
                     }
                 }
@@ -136,7 +136,7 @@ fn expect_token<'a>(expected: &LexToken, token: Option<&LexToken>) -> Result<(),
 #[cfg(test)]
 mod test {
     use super::*;
-    
+
     #[test]
     fn it_parses_let_statements() {
         // let x = 42;
