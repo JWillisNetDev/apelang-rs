@@ -1,12 +1,12 @@
 //! This module lexes.
 //!
 
+use crate::ApeInteger;
 use phf::phf_map;
 use std::{
     iter::{Iterator, Peekable},
     str::Chars,
 };
-use crate::ApeInteger;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LexToken {
@@ -43,8 +43,8 @@ pub enum LexToken {
     LBracket,  // [
     RBracket,  // ]
 
-    Integer(ApeInteger),       // [0-9]+
-    Identifier(String), // [A-Za-z]+ (not another token)
+    Integer(ApeInteger), // [0-9]+
+    Identifier(String),  // [A-Za-z]+ (not another token)
 
     Error(String),
 }

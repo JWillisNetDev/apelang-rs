@@ -52,10 +52,7 @@ pub enum Expression {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Statement {
-    Let {
-        ident: Identifier,
-        expr: Expression,
-    },
+    Let { ident: Identifier, expr: Expression },
     Expression(Expression),
 }
 
@@ -96,10 +93,7 @@ where
                     let expr = self.try_parse_expression(Precedence::Lowest)?;
                     expect_token(&LexToken::Semicolon, self.tokens.next())?;
 
-                    Statement::Let {
-                        ident,
-                        expr,
-                    }
+                    Statement::Let { ident, expr }
                 }
                 _ => return Err(format!("Unexpected token encountered: {:?}", token)),
             };
@@ -109,9 +103,7 @@ where
     }
 
     fn try_parse_expression(&mut self, precedence: Precedence) -> Result<Expression, String> {
-        while let Some(token) = self.tokens.next() {
-
-        }
+        while let Some(token) = self.tokens.next() {}
 
         Err("Expected an expression.".into())
     }
@@ -121,7 +113,7 @@ fn expect_token_identifier(token: Option<&LexToken>) -> Result<Identifier, Strin
     match token {
         Some(LexToken::Identifier(ident)) => Ok(ident.clone()),
         Some(_) => Err(format!("Expected identifier, found {:?}", token)),
-        None => Err("Expected identifier, found none".into())
+        None => Err("Expected identifier, found none".into()),
     }
 }
 
