@@ -6,6 +6,7 @@ use std::{
     iter::{Iterator, Peekable},
     str::Chars,
 };
+use crate::ApeInteger;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LexToken {
@@ -42,7 +43,7 @@ pub enum LexToken {
     LBracket,  // [
     RBracket,  // ]
 
-    Integer(i32),       // [0-9]+
+    Integer(ApeInteger),       // [0-9]+
     Identifier(String), // [A-Za-z]+ (not another token)
 
     Error(String),
@@ -107,7 +108,7 @@ impl<'a> Lexer<'a> {
     fn try_read_literal(&mut self) -> Result<LexToken, String> {
         let literal = self.read_to_delimiter();
         let literal = literal
-            .parse::<i32>()
+            .parse::<ApeInteger>()
             .map_err(|_| format!("Could not convert `{literal}` to an integer!"))?;
         Ok(LexToken::Integer(literal))
     }
@@ -304,7 +305,7 @@ mod test {
         assert_eq!(Some(LexToken::Let), actual.next());
         assert_eq!(Some(LexToken::Identifier("var".into())), actual.next());
         assert_eq!(Some(LexToken::Assign), actual.next());
-        assert_eq!(Some(LexToken::Integer(100)), actual.next());
+        assert_eq!(Some(LexToken::Integer(ApeInteger(100))), actual.next());
         assert_eq!(Some(LexToken::Semicolon), actual.next());
 
         assert_eq!(None, actual.next());
@@ -332,9 +333,9 @@ mod test {
         assert_eq!(Some(LexToken::Semicolon), actual.next());
         assert_eq!(Some(LexToken::Identifier("closure".into())), actual.next());
         assert_eq!(Some(LexToken::LParen), actual.next());
-        assert_eq!(Some(LexToken::Integer(10)), actual.next());
+        assert_eq!(Some(LexToken::Integer(ApeInteger(10))), actual.next());
         assert_eq!(Some(LexToken::Comma), actual.next());
-        assert_eq!(Some(LexToken::Integer(20)), actual.next());
+        assert_eq!(Some(LexToken::Integer(ApeInteger(20))), actual.next());
         assert_eq!(Some(LexToken::RParen), actual.next());
         assert_eq!(Some(LexToken::Semicolon), actual.next());
 
@@ -400,7 +401,7 @@ mod test {
         assert_eq!(Some(LexToken::RParen), actual.next());
         assert_eq!(Some(LexToken::LBrace), actual.next());
         assert_eq!(Some(LexToken::Return), actual.next());
-        assert_eq!(Some(LexToken::Integer(100)), actual.next());
+        assert_eq!(Some(LexToken::Integer(ApeInteger(100))), actual.next());
         assert_eq!(Some(LexToken::Semicolon), actual.next());
         assert_eq!(Some(LexToken::RBrace), actual.next());
 
