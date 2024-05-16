@@ -40,6 +40,12 @@ pub enum LexToken {
     Error(String),
 }
 
+impl std::fmt::Display for LexToken {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", dbg!(self))
+    }
+}
+
 static KEYWORDS: phf::Map<&'static str, LexToken> = phf_map! {
     "let" => LexToken::Let,
     "if" => LexToken::If,
