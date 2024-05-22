@@ -7,6 +7,8 @@ use std::{
     rc::Rc,
 };
 
+type ParseError = String;
+
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 enum Precedence {
     None,
@@ -20,7 +22,7 @@ enum Precedence {
     Index,
 }
 
-fn get_precedence(token: LexToken) -> Precedence {
+fn get_precedence(token: &LexToken) -> Precedence {
     match token {
         LexToken::Equals => Precedence::Equals,
         LexToken::NotEquals => Precedence::Equals,
@@ -37,17 +39,15 @@ fn get_precedence(token: LexToken) -> Precedence {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum AstNode {
-    StatementNode(Statement),
-    ExpressionNode(Expression),
-}
-
-#[derive(Debug, Clone, PartialEq)]
 pub enum Expression {
     BinaryOp(Rc<Expression>, Rc<Expression>),
     Identifier(Identifier),
+    
     StringLiteral(String),
     IntegerLiteral(ApeInteger),
+    BooleanLiteral(bool),
+
+    Prefix(LexToken, Rc<Expression>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -60,12 +60,12 @@ pub struct Parser<'a, T: Iterator<Item = &'a LexToken>> {
     tokens: Peekable<T>,
 }
 
-pub struct Program<'a> {
-    statements: Vec<&'a Statement>,
+pub struct Program {
+    statements: Vec<Statement>,
 }
 
-impl<'a> Program<'a> {
-    fn new(statements: Vec<&'a Statement>) -> Self {
+impl Program {
+    fn new(statements: Vec<Statement>) -> Self {
         Program { statements }
     }
 
@@ -84,9 +84,11 @@ where
         }
     }
 
-    pub fn parse(&mut self) -> Result<Program<'a>, String> {
+    pub fn parse(&mut self) -> Result<Program, String> {
+        let mut program = Program::from_empty();
+
         while let Some(token) = self.tokens.next() {
-            let ast_node = match token {
+            let statement = match token {
                 LexToken::Let => {
                     let ident = expect_token_identifier(self.tokens.next())?;
                     expect_token(&LexToken::Assign, self.tokens.next())?;
@@ -97,19 +99,59 @@ where
                 }
                 _ => return Err(format!("Unexpected token encountered: {:?}", token)),
             };
+
+            program.statements.push(statement);
         }
 
-        Err("Some error".into())
+        Ok(program)
     }
 
-    fn try_parse_expression(&mut self, precedence: Precedence) -> Result<Expression, String> {
-        while let Some(token) = self.tokens.next() {}
+    fn try_parse_expression(&mut self, precedence: Precedence) -> Result<Expression, ParseError> {
+        let prefix = match self.tokens.next() {
+            Some(LexToken::Identifier(ident)) => Expression::Identifier(ident.clone()),
+            Some(LexToken::Integer(i)) => Expression::IntegerLiteral(*i),
+            Some(token) if is_boolean_literal(token) => {
+                if token == &LexToken::True {
+                    Expression::BooleanLiteral(true)
+                }
+                else {
+                    Expression::BooleanLiteral(false)
+                }
+            }
+            Some(token) if is_prefix(token) => {
+                let right = self.try_parse_expression(Precedence::Prefix)?;
+                Expression::Prefix(token.clone(), Rc::new(right))
+            }
+            Some(token) => {
+                return Err(format!(
+                    "Expected a prefix expression, but found {:?}",
+                    token
+                ))
+            }
+            None => return Err("Expected a prefix expression, but found nothing".into()),
+        };
 
-        Err("Expected an expression.".into())
+        while self
+            .tokens
+            .peek()
+            .is_some_and(|peek| *peek != &LexToken::Semicolon && get_precedence(peek) > precedence)
+        {
+
+        }
+
+        Ok(prefix)
     }
 }
 
-fn expect_token_identifier(token: Option<&LexToken>) -> Result<Identifier, String> {
+fn is_boolean_literal(token: &LexToken) -> bool {
+    token == &LexToken::True || token == &LexToken::False
+}
+
+fn is_prefix(token: &LexToken) -> bool {
+    token == &LexToken::Bang || token == &LexToken::Minus
+}
+
+fn expect_token_identifier(token: Option<&LexToken>) -> Result<Identifier, ParseError> {
     match token {
         Some(LexToken::Identifier(ident)) => Ok(ident.clone()),
         Some(_) => Err(format!("Expected identifier, found {:?}", token)),
@@ -117,7 +159,7 @@ fn expect_token_identifier(token: Option<&LexToken>) -> Result<Identifier, Strin
     }
 }
 
-fn expect_token<'a>(expected: &LexToken, token: Option<&LexToken>) -> Result<(), String> {
+fn expect_token(expected: &LexToken, token: Option<&LexToken>) -> Result<(), ParseError> {
     match token {
         Some(token) if token == expected => Ok(()),
         Some(token) => Err(format!("Expected {:?}, found {:?}", expected, token)),
@@ -146,7 +188,7 @@ mod test {
 
         assert_eq!(
             actual.statements[0],
-            &Statement::Let {
+            Statement::Let {
                 ident: "x".into(),
                 expr: Expression::IntegerLiteral(ApeInteger(42))
             }
