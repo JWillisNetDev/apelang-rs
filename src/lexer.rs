@@ -10,11 +10,15 @@ use std::{
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LexToken {
+    // Keywords
     Let,    // let
     If,     // if
     Fn,     // fn
     Return, // return
+    True,   // true
+    False,  // false
 
+    // Operators
     Plus,              // +
     PlusAssign,        // +=
     Minus,             // -
@@ -34,6 +38,7 @@ pub enum LexToken {
     LessThan,          // <
     LessThanEquals,    // <=
 
+    // Delimiters
     Semicolon, // ;
     Comma,     // ,
     LParen,    // (
@@ -43,6 +48,7 @@ pub enum LexToken {
     LBracket,  // [
     RBracket,  // ]
 
+    // Literals
     Integer(ApeInteger), // [0-9]+
     Identifier(String),  // [A-Za-z]+ (not another token)
 
@@ -54,6 +60,8 @@ static KEYWORDS: phf::Map<&'static str, LexToken> = phf_map! {
     "if" => LexToken::If,
     "fn" => LexToken::Fn,
     "return" => LexToken::Return,
+    "true" => LexToken::True,
+    "false" => LexToken::False,
 };
 
 fn try_get_keyword(keyword: &str) -> Option<LexToken> {
@@ -338,6 +346,22 @@ mod test {
         assert_eq!(Some(LexToken::Integer(ApeInteger(20))), actual.next());
         assert_eq!(Some(LexToken::RParen), actual.next());
         assert_eq!(Some(LexToken::Semicolon), actual.next());
+
+        assert_eq!(None, actual.next());
+    }
+
+    #[test]
+    fn it_lexes_keywords() {
+        const INPUT: &'static str = "let if fn return true false";
+
+        let mut actual = Lexer::new(INPUT);
+
+        assert_eq!(Some(LexToken::Let), actual.next());
+        assert_eq!(Some(LexToken::If), actual.next());
+        assert_eq!(Some(LexToken::Fn), actual.next());
+        assert_eq!(Some(LexToken::Return), actual.next());
+        assert_eq!(Some(LexToken::True), actual.next());
+        assert_eq!(Some(LexToken::False), actual.next());
 
         assert_eq!(None, actual.next());
     }
