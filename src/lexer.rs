@@ -13,6 +13,7 @@ pub enum LexToken {
     // Keywords
     Let,    // let
     If,     // if
+    Else,   // else
     Fn,     // fn
     Return, // return
     True,   // true
@@ -58,6 +59,7 @@ pub enum LexToken {
 static KEYWORDS: phf::Map<&'static str, LexToken> = phf_map! {
     "let" => LexToken::Let,
     "if" => LexToken::If,
+    "else" => LexToken::Else,
     "fn" => LexToken::Fn,
     "return" => LexToken::Return,
     "true" => LexToken::True,
